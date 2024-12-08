@@ -1,6 +1,6 @@
 {
   "name": "craft-calculator",
-  "version": "0.1.0-alpha",
+  "version": "v0.2.0-alpha",
   "private": true,
   "scripts": {
     "dev": "next dev",

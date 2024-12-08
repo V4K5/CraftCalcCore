@@ -1,17 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X } from 'lucide-react'
-import { Recipe } from '@/app/page'
+import { Recipe, Category } from '@/types'
 import { toast } from '@/components/ui/use-toast'
 
 type CraftRecipeCreatorProps = {
   addRecipe: (recipe: Recipe) => void;
   existingRecipes: Recipe[];
+  categories: Category[];
 }
 
 type Ingredient = {
@@ -20,10 +21,11 @@ type Ingredient = {
   isRecipe: boolean;
 }
 
-export default function CraftRecipeCreator({ addRecipe, existingRecipes }: CraftRecipeCreatorProps) {
+export default function CraftRecipeCreator({ addRecipe, existingRecipes, categories }: CraftRecipeCreatorProps) {
   const [recipeName, setRecipeName] = useState('')
   const [outputQuantity, setOutputQuantity] = useState(1)
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, { item: 'placeholder', quantity: 1, isRecipe: false }])
@@ -47,19 +49,21 @@ export default function CraftRecipeCreator({ addRecipe, existingRecipes }: Craft
     setIngredients(newIngredients)
   }
 
-  const resetForm = () => {
-    setRecipeName('')
-    setOutputQuantity(1)
-    setIngredients([])
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!selectedCategory) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, выберите категорию для рецепта.",
+      })
+      return
+    }
     const newRecipe: Recipe = {
       id: Date.now().toString(),
       name: recipeName,
       outputQuantity,
-      ingredients: ingredients.filter(ing => ing.item !== 'placeholder')
+      ingredients: ingredients.filter(ing => ing.item !== 'placeholder'),
+      categoryId: selectedCategory
     }
     addRecipe(newRecipe)
     toast({
@@ -67,6 +71,13 @@ export default function CraftRecipeCreator({ addRecipe, existingRecipes }: Craft
       description: `Рецепт "${recipeName}" успешно добавлен.`,
     })
     resetForm()
+  }
+
+  const resetForm = () => {
+    setRecipeName('')
+    setOutputQuantity(1)
+    setIngredients([])
+    setSelectedCategory('')
   }
 
   return (
@@ -92,9 +103,22 @@ export default function CraftRecipeCreator({ addRecipe, existingRecipes }: Craft
         />
       </div>
       <div>
-        <Label>Ингредиенты (необязательно)</Label>
+        <Label htmlFor="category">Категория</Label>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Выберите категорию" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Ингредиенты</Label>
         {ingredients.map((ingredient, index) => (
-          <div key={index} className="flex space-x-2 mt-2">
+          <div key={index} className="flex items-center space-x-2 mt-2">
             <Select 
               value={ingredient.item} 
               onValueChange={(value) => handleIngredientChange(index, 'item', value)}
@@ -129,4 +153,3 @@ export default function CraftRecipeCreator({ addRecipe, existingRecipes }: Craft
     </form>
   )
 }
-

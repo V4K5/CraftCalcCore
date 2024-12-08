@@ -6,15 +6,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Recipe } from '@/app/page'
-import { Plus, Minus, Save } from 'lucide-react'
+import { Recipe, Category } from '@/types'
+import { Plus, Minus, Save, Trash } from 'lucide-react'
+import { toast } from '@/components/ui/use-toast'
 
 type RecipeManagerProps = {
   recipes: Recipe[];
+  categories: Category[];
   updateRecipe: (updatedRecipe: Recipe) => void;
+  deleteRecipe: (recipeId: string) => void;
 }
 
-export default function RecipeManager({ recipes, updateRecipe }: RecipeManagerProps) {
+export default function RecipeManager({ recipes, categories, updateRecipe, deleteRecipe }: RecipeManagerProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [editedRecipe, setEditedRecipe] = useState<Recipe | null>(null)
 
@@ -54,6 +57,18 @@ export default function RecipeManager({ recipes, updateRecipe }: RecipeManagerPr
     if (editedRecipe) {
       updateRecipe(editedRecipe)
       setSelectedRecipe(editedRecipe)
+    }
+  }
+
+  const handleDelete = () => {
+    if (editedRecipe) {
+      deleteRecipe(editedRecipe.id)
+      toast({
+        title: "Рецепт удален",
+        description: `Рецепт "${editedRecipe.name}" успешно удален.`,
+      })
+      setSelectedRecipe(null)
+      setEditedRecipe(null)
     }
   }
 
@@ -113,13 +128,33 @@ export default function RecipeManager({ recipes, updateRecipe }: RecipeManagerPr
                 <Plus className="h-4 w-4 mr-2" /> Добавить ингредиент
               </Button>
             </div>
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" /> Сохранить изменения
-            </Button>
+            <div>
+              <Label htmlFor="category">Категория</Label>
+              <Select 
+                value={editedRecipe.categoryId} 
+                onValueChange={(value) => setEditedRecipe({ ...editedRecipe, categoryId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите категорию" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-between">
+              <Button onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" /> Сохранить изменения
+              </Button>
+              <Button onClick={handleDelete} variant="destructive">
+                <Trash className="h-4 w-4 mr-2" /> Удалить рецепт
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
     </div>
   )
 }
-

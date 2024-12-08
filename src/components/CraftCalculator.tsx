@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { Recipe } from '@/app/page'
+import { Recipe, Category } from '@/types'
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 type CraftCalculatorProps = {
   recipes: Recipe[];
@@ -47,11 +48,12 @@ function ItemCard({ item, quantity, availableQuantity, onAvailableChange }: {
   )
 }
 
-export default function CraftCalculator({ recipes }: CraftCalculatorProps) {
+export default function CraftCalculator({ recipes, categories }: { recipes: Recipe[], categories: Category[] }) {
   const [selectedItem, setSelectedItem] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [result, setResult] = useState<CraftLevel[]>([])
   const [availableResources, setAvailableResources] = useState<Record<string, number>>({})
+  const [searchTerm, setSearchTerm] = useState('')
 
   const calculateIngredients = (recipeName: string, targetQuantity: number, level: number = 0, available: Record<string, number>): CalculatedIngredient[] => {
     const recipe = recipes.find(r => r.name === recipeName)
@@ -145,8 +147,23 @@ export default function CraftCalculator({ recipes }: CraftCalculatorProps) {
     handleCalculate()
   }, [availableResources, selectedItem, quantity])
 
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter(recipe => 
+      recipe.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [recipes, searchTerm])
+
   return (
     <div className="space-y-4">
+      <div>
+        <Label htmlFor="searchTerm">Поиск предмета</Label>
+        <Input
+          id="searchTerm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Введите название предмета"
+        />
+      </div>
       <div>
         <Label htmlFor="itemSelect">Выберите предмет</Label>
         <Select value={selectedItem} onValueChange={setSelectedItem}>
@@ -154,9 +171,11 @@ export default function CraftCalculator({ recipes }: CraftCalculatorProps) {
             <SelectValue placeholder="Выберите предмет для крафта" />
           </SelectTrigger>
           <SelectContent>
-            {recipes.map((recipe) => (
-              <SelectItem key={recipe.id} value={recipe.name}>{recipe.name}</SelectItem>
-            ))}
+            <ScrollArea className="h-[200px]">
+              {filteredRecipes.map((recipe) => (
+                <SelectItem key={recipe.id} value={recipe.name}>{recipe.name}</SelectItem>
+              ))}
+            </ScrollArea>
           </SelectContent>
         </Select>
       </div>
