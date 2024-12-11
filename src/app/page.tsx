@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CraftRecipeCreator from '@/components/CraftRecipeCreator'
 import CraftCalculator from '@/components/CraftCalculator'
@@ -22,71 +22,67 @@ export default function Home() {
     if (savedCategories) {
       const parsedCategories = JSON.parse(savedCategories)
       if (!parsedCategories.some((c: Category) => c.id === DEFAULT_CATEGORY_ID)) {
-        parsedCategories.push({ id: DEFAULT_CATEGORY_ID, name: 'Без категории', parentId: null })
+        parsedCategories.push({ id: DEFAULT_CATEGORY_ID, name: 'Базовая категория', parentId: null })
       }
       setCategories(parsedCategories)
     } else {
-      setCategories([{ id: DEFAULT_CATEGORY_ID, name: 'Без категории', parentId: null }])
+      setCategories([{ id: DEFAULT_CATEGORY_ID, name: 'Базовая категория', parentId: null }])
     }
   }, [])
 
-  const addRecipe = (recipe: Recipe) => {
-    const updatedRecipes = [...recipes, recipe]
-    setRecipes(updatedRecipes)
-    localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
-  }
+  useEffect(() => {
+    localStorage.setItem('categories', JSON.stringify(categories))
+  }, [categories])
 
-  const updateRecipe = (updatedRecipe: Recipe) => {
-    const updatedRecipes = recipes.map(recipe => 
+  useEffect(() => {
+    localStorage.setItem('recipes', JSON.stringify(recipes))
+  }, [recipes])
+
+  const addRecipe = useCallback((recipe: Recipe) => {
+    setRecipes(prevRecipes => [...prevRecipes, recipe])
+  }, [])
+
+  const updateRecipe = useCallback((updatedRecipe: Recipe) => {
+    setRecipes(prevRecipes => prevRecipes.map(recipe => 
       recipe.id === updatedRecipe.id ? updatedRecipe : recipe
-    )
-    setRecipes(updatedRecipes)
-    localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
-  }
+    ))
+  }, [])
 
-  const deleteRecipe = (recipeId: string) => {
-    const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId)
-    setRecipes(updatedRecipes)
-    localStorage.setItem('recipes', JSON.stringify(updatedRecipes))
-  }
+  const deleteRecipe = useCallback((recipeId: string) => {
+    setRecipes(prevRecipes => prevRecipes.filter(recipe => recipe.id !== recipeId))
+  }, [])
 
-  const addCategory = (category: Category) => {
-    const updatedCategories = [...categories, category]
-    setCategories(updatedCategories)
-    localStorage.setItem('categories', JSON.stringify(updatedCategories))
-  }
+  const addCategory = useCallback((category: Category) => {
+    setCategories(prevCategories => [...prevCategories, category])
+  }, [])
 
-  const updateCategory = (categoryId: string, newName: string) => {
-    const updatedCategories = categories.map(category =>
+  const updateCategory = useCallback((categoryId: string, newName: string) => {
+    setCategories(prevCategories => prevCategories.map(category =>
       category.id === categoryId ? { ...category, name: newName } : category
-    );
-    setCategories(updatedCategories);
-    localStorage.setItem('categories', JSON.stringify(updatedCategories));
-  };
-
-  const deleteCategory = (categoryId: string) => {
-    if (categoryId === DEFAULT_CATEGORY_ID) return // Запрещаем удаление категории "Без категории"
-
-    const deleteCategoryRecursive = (catId: string) => {
-      const childCategories = categories.filter(cat => cat.parentId === catId);
-      childCategories.forEach(child => deleteCategoryRecursive(child.id));
-
-      const updatedCategories = categories.filter(category => category.id !== catId);
-      setCategories(updatedCategories);
-
-      // Обновляем рецепты, перемещая их в категорию "Без категории"
-      const updatedRecipes = recipes.map(recipe =>
-        recipe.categoryId === catId ? { ...recipe, categoryId: DEFAULT_CATEGORY_ID } : recipe
-      );
-      setRecipes(updatedRecipes);
-    };
-
-    deleteCategoryRecursive(categoryId);
-
-    localStorage.setItem('categories', JSON.stringify(categories));
-    localStorage.setItem('recipes', JSON.stringify(recipes));
-  };
-
+    ))
+  }, [])
+    
+  const deleteCategory = useCallback((categoryId: string) => {
+    if (categoryId === DEFAULT_CATEGORY_ID) return // Запрещаем удаление категории "Базовая категория"
+    
+    setCategories(prevCategories => {
+      const deleteCategoryRecursive = (catId: string, cats: Category[]): Category[] => {
+        const updatedCats = cats.filter(cat => cat.id !== catId);
+        const childCategories = cats.filter(cat => cat.parentId === catId);
+        childCategories.forEach(child => {
+          updatedCats = deleteCategoryRecursive(child.id, updatedCats);
+        });
+        return updatedCats;
+      };
+      
+      return deleteCategoryRecursive(categoryId, prevCategories);
+    });
+    
+    setRecipes(prevRecipes => prevRecipes.map(recipe =>
+      recipe.categoryId === categoryId ? { ...recipe, categoryId: DEFAULT_CATEGORY_ID } : recipe
+    ));
+  }, [])
+    
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Калькулятор крафта</h1>
@@ -102,6 +98,8 @@ export default function Home() {
             addRecipe={addRecipe} 
             existingRecipes={recipes}
             categories={categories}
+            updateRecipe={updateRecipe}
+            addCategory={addCategory}
           />
         </TabsContent>
         <TabsContent value="calculate">
@@ -127,3 +125,4 @@ export default function Home() {
     </div>
   )
 }
+
